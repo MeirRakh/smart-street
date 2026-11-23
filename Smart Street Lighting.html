@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Smart Street Lighting</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-database-compat.min.js"></script>
+<style>
+:root{--bg:#eef1f6;--card:#fff;--tx:#0f172a;--mu:#64748b;--bd:#dbe1ec;--ac:#f5a623;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0a0f1e;--card:#121a30;--tx:#e8edf8;--mu:#8e9ab8;--bd:#222c4a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0a0f1e;--card:#121a30;--tx:#e8edf8;--mu:#8e9ab8;--bd:#222c4a;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{background:var(--bg);color:var(--tx);font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;min-height:100%}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px}
+.mu{color:var(--mu)}
+.b{padding:.35rem .7rem;border-radius:9px;border:1px solid var(--bd);background:var(--card);font-size:.85rem;cursor:pointer;color:var(--tx)}
+.b:hover{border-color:var(--ac)}
+.b.on{background:var(--ac);color:#1a1200;border-color:var(--ac);font-weight:600}
+.b:focus-visible,input:focus-visible{outline:2px solid #38bdf8;outline-offset:2px}
+input[type=range]{width:100%;accent-color:var(--ac)}
+input[type=range]:disabled{opacity:.45}
+.chip{font-size:.78rem;padding:.25rem .6rem;border-radius:99px;border:1px solid var(--bd);background:var(--card)}
+.row{border-top:1px solid var(--bd);padding-top:.6rem}
+.big{font-size:1.7rem;font-weight:700;line-height:1.1}
+#scene circle{transition:opacity .7s,r .7s,fill .5s}
+.walker{animation:walk 3s linear infinite}
+@keyframes walk{from{transform:translateX(0)}to{transform:translateX(190px)}}
+.pulse{animation:pl 1s ease-in-out infinite}
+@keyframes pl{50%{opacity:.25}}
+@media(prefers-reduced-motion:reduce){.walker,.pulse{animation:none}#scene circle{transition:none}}
+.lg{font-size:.8rem;border-left:3px solid var(--bd);padding:.15rem .5rem;margin-bottom:.3rem}
+/* ===== Современный редизайн: градиенты, стекло, анимации ===== */
+:root{--card:rgba(255,255,255,.62);--bd:rgba(120,110,160,.22);--tx:#1c1633;--mu:#6b6785;--ac:#f43f5e;--acg:linear-gradient(135deg,#fbbf24 0%,#f43f5e 55%,#8b5cf6 100%);--trk:rgba(120,110,160,.25);--bgg:radial-gradient(circle at 10% 10%,rgba(251,191,36,.38),transparent 45%),radial-gradient(circle at 90% 15%,rgba(167,139,250,.38),transparent 45%),radial-gradient(circle at 60% 95%,rgba(56,189,248,.3),transparent 50%),linear-gradient(160deg,#fff7ed,#f5f3ff 55%,#e0f2fe)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--card:rgba(24,26,58,.55);--bd:rgba(160,150,220,.2);--tx:#eceaff;--mu:#a29fc4;--trk:rgba(160,150,220,.25);--bgg:radial-gradient(circle at 12% 8%,rgba(139,92,246,.45),transparent 45%),radial-gradient(circle at 88% 18%,rgba(244,63,94,.32),transparent 42%),radial-gradient(circle at 55% 100%,rgba(251,146,60,.22),transparent 50%),linear-gradient(160deg,#080b1f,#150f33 55%,#1d0f30)}}
+:root[data-theme="dark"]{--card:rgba(24,26,58,.55);--bd:rgba(160,150,220,.2);--tx:#eceaff;--mu:#a29fc4;--trk:rgba(160,150,220,.25);--bgg:radial-gradient(circle at 12% 8%,rgba(139,92,246,.45),transparent 45%),radial-gradient(circle at 88% 18%,rgba(244,63,94,.32),transparent 42%),radial-gradient(circle at 55% 100%,rgba(251,146,60,.22),transparent 50%),linear-gradient(160deg,#080b1f,#150f33 55%,#1d0f30)}
+html{scroll-behavior:smooth}
+body{font-family:Inter,"Segoe UI",system-ui,sans-serif;position:relative}
+body::before{content:"";position:fixed;inset:-20%;z-index:-1;background:var(--bgg);animation:drift 22s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(2%,2%,0) scale(1.1) rotate(2deg)}}
+header h1{font-size:1.7rem;font-weight:800;letter-spacing:-.02em;background:var(--acg);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;width:fit-content}
+.card{border-radius:22px;backdrop-filter:blur(18px) saturate(1.5);-webkit-backdrop-filter:blur(18px) saturate(1.5);box-shadow:0 12px 40px -14px rgba(76,29,149,.35);transition:transform .4s cubic-bezier(.2,.8,.2,1),box-shadow .4s;animation:rise .8s cubic-bezier(.2,.8,.2,1) both}
+.card:hover{transform:translateY(-3px);box-shadow:0 18px 50px -14px rgba(244,63,94,.35)}
+.card:nth-child(2){animation-delay:.08s}.card:nth-child(3){animation-delay:.16s}
+#stats .card{animation:none}
+@keyframes rise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+.b{border-radius:12px;background:var(--card);backdrop-filter:blur(8px);transition:transform .2s,box-shadow .25s,background .3s,border-color .3s,color .3s}
+.b:hover{transform:translateY(-1px);box-shadow:0 6px 16px -6px rgba(244,63,94,.5)}
+.b:active{transform:scale(.96)}
+.b.on{background:var(--acg);color:#fff;border-color:transparent;box-shadow:0 8px 20px -8px rgba(244,63,94,.7)}
+#modes{padding:3px;border-radius:15px;background:var(--card);border:1px solid var(--bd);backdrop-filter:blur(8px)}
+#modes .b{border-color:transparent;background:transparent;backdrop-filter:none}
+#modes .b.on{background:var(--acg)}
+.chip{backdrop-filter:blur(8px)}
+#db::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:currentColor;margin-right:6px;animation:pl 1.6s ease-in-out infinite}
+.big{background:var(--acg);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;width:fit-content;transition:transform .3s}
+.row{border-top-color:var(--bd)}
+input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:99px;background:var(--trk);margin-top:.5rem;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--acg);border:2px solid #fff;box-shadow:0 2px 10px rgba(244,63,94,.55);transition:transform .2s}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#f43f5e;border:2px solid #fff;box-shadow:0 2px 10px rgba(244,63,94,.55)}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.25)}
+#scene{box-shadow:0 0 0 1px var(--bd)}
+#scene circle[id^=g]{filter:blur(7px)}
+.lg{border-left-width:3px;border-radius:0 8px 8px 0;background:rgba(128,120,180,.08);padding:.25rem .6rem}
+.lg:first-child{animation:slide .45s cubic-bezier(.2,.8,.2,1)}
+@keyframes slide{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){body::before,.card,.lg,#db::before{animation:none}.card,.b{transition:none}}
+</style>
+</head>
+<body class="p-3 md:p-6">
+<div class="max-w-6xl mx-auto space-y-4">
+
+<header class="flex flex-wrap items-center justify-between gap-3">
+  <div>
+    <h1 class="text-xl md:text-2xl font-bold">Smart Street Lighting</h1>
+    <p class="mu text-sm">Көше жарықтандыруын басқару — IoT симуляторы</p>
+  </div>
+  <div class="flex flex-wrap items-center gap-2">
+    <span id="db" class="chip"></span>
+    <div id="modes" class="flex gap-1"></div>
+  </div>
+</header>
+
+<section class="card p-2"><svg id="scene" viewBox="0 0 720 250" class="w-full h-auto rounded-xl" role="img" aria-label="Көше шамдарының схемасы"></svg></section>
+
+<section id="stats" class="grid grid-cols-2 md:grid-cols-4 gap-3"></section>
+
+<div class="grid lg:grid-cols-3 gap-4">
+  <section class="card p-4 space-y-3">
+    <div class="flex items-center justify-between"><h2 class="font-semibold">Виртуалды датчиктер</h2><button id="simBtn" class="b" onclick="toggleSim()"></button></div>
+    <label class="block text-sm">Сыртқы жарық: <b id="vl"></b> lux<input id="lux" type="range" min="0" max="1000" oninput="setS('lux',+this.value)"></label>
+    <label class="block text-sm">Тәулік уақыты: <b id="vh"></b><input id="hour" type="range" min="0" max="23.9" step="0.1" oninput="setS('hour',+this.value)"></label>
+    <label class="block text-sm">Тұман: <b id="vf"></b> %<input id="fog" type="range" min="0" max="100" oninput="setS('fog',+this.value)"></label>
+    <label class="block text-sm">Қуат шегі: <b id="vm"></b> Вт<input id="lim" type="range" min="200" max="720" step="10" oninput="setS('limit',+this.value)"></label>
+    <div class="row"><p class="text-sm mb-2">Қозғалыс датчигі (PIR) — қозғалыс жасау:</p><div id="pir" class="flex flex-wrap gap-2"></div></div>
+  </section>
+
+  <section class="card p-4 space-y-3">
+    <div class="flex items-center justify-between"><h2 class="font-semibold">Басқару</h2>
+      <span><button class="b" onclick="allOn(1)">Барлығын қосу</button> <button class="b" onclick="allOn(0)">Өшіру</button></span></div>
+    <div id="secs" class="space-y-3"></div>
+    <div class="row space-y-2">
+      <p class="text-sm">Таңдалған шам: <b id="lt"></b> <span class="mu">(схемадан басыңыз)</span></p>
+      <div class="flex gap-2"><button id="lonb" class="b" onclick="lampToggle()"></button><button id="lfb" class="b" onclick="lampFault()"></button></div>
+      <input id="lb" type="range" min="0" max="100" oninput="lampB(+this.value)" aria-label="Шам жарықтығы">
+    </div>
+  </section>
+
+  <section class="card p-4">
+    <div class="flex items-center justify-between mb-2"><h2 class="font-semibold">Ескертулер</h2><span id="ac" class="chip"></span></div>
+    <div id="alerts" class="mb-3 min-h-[3rem]"></div>
+    <h2 class="font-semibold mb-2">Оқиғалар журналы</h2>
+    <div id="events" class="max-h-48 overflow-y-auto"></div>
+  </section>
+</div>
+
+<div class="grid md:grid-cols-2 gap-4">
+  <section class="card p-4"><h2 class="font-semibold mb-2">Жарықтық пен сыртқы жарық</h2><div class="relative h-56"><canvas id="c1"></canvas></div></section>
+  <section class="card p-4"><h2 class="font-semibold mb-2">Қуат тұтыну (Вт)</h2><div class="relative h-56"><canvas id="c2"></canvas></div></section>
+</div>
+
+<p class="mu text-xs pb-4">Автоматты ережелер: R1 қараңғыда 60 % · R2 күндіз өшіру · R3 қозғалыста 100 % · R4 10 сек қозғалыссыз 30 % · R5 тұман &gt; 60 % → +20 % · R6 үнемдеу режимі ≤ 70 %.</p>
+</div>
+
+<script>
+// ===== Firebase баптауы: өз кілттеріңізді қойыңыз. null болса — демо-режим (браузер жады) =====
+const FB_CONFIG = null;
+/* мысалы: { apiKey:"...", authDomain:"x.firebaseapp.com", databaseURL:"https://x-default-rtdb.firebaseio.com", projectId:"x", appId:"..." } */
+
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.min(b,Math.max(a,v));
+const SEC = ['A','B','C'];
+const NAMES = {A:'A — Орталық көше', B:'B — Саябақ', C:'C — Тұрғын аула'};
+const CID = Math.random().toString(36).slice(2);
+const MODES = {auto:'Автоматты', manual:'Қолмен', eco:'Энергия үнемдеу'};
+let S = {mode:'auto', sim:true, hour:20, lux:5, fog:10, limit:500, motion:{A:false,B:false,C:false}, lamps:{}};
+SEC.forEach(s => [1,2,3,4].forEach(i => S.lamps[s+i] = {sector:s,on:false,b:0,fault:false,p:0}));
+const seen = {A:0,B:0,C:0}, last = {}, ak = {};
+let sel = 'A1', n = 0, hist = {t:[],lux:[],avg:[],pw:[]}, events = [], alerts = [], c1, c2;
+
+// ===== Деректер қабаты: Firebase Realtime Database немесе жергілікті жады =====
+let db = null;
+try { if (FB_CONFIG && window.firebase) { firebase.initializeApp(FB_CONFIG); db = firebase.database(); } } catch (e) { console.error(e); }
+const dbSet = (p,v) => { try { db ? db.ref(p).set(v) : localStorage.setItem('ssl:'+p, JSON.stringify(v)); } catch (e) {} };
+const dbPush = (p,v) => { try { if (db) db.ref(p).push(v); else { const k='ssl:'+p, a=JSON.parse(localStorage.getItem(k)||'[]'); a.push(v); localStorage.setItem(k, JSON.stringify(a.slice(-100))); } } catch (e) {} };
+const save = () => dbSet('state', {...S, by:CID, ts:Date.now()});
+if (db) db.ref('state').on('value', sn => { const v = sn.val(); if (v && v.by !== CID) { Object.assign(S, v); render(); } });
+else try { const v = JSON.parse(localStorage.getItem('ssl:state')||'null'); if (v && v.lamps) { Object.assign(S, v); S.sim = true; } } catch (e) {}
+
+// ===== Көмекші функциялар =====
+const lampsOf = s => Object.values(S.lamps).filter(l => l.sector === s);
+const hhmm = h => String(Math.floor(h)).padStart(2,'0') + ':' + String(Math.floor((h%1)*60)).padStart(2,'0');
+const phase = () => (S.hour>=7&&S.hour<17) ? 'Күн' : ((S.hour>=17&&S.hour<20)||(S.hour>=5&&S.hour<7)) ? 'Ымырт' : 'Түн';
+const luxOf = h => (h>6&&h<18) ? Math.max(5, Math.round(1000*Math.sin(Math.PI*(h-6)/12))) : 5;
+const time = t => new Date(t).toLocaleTimeString('ru-RU');
+function log(type,text){ const e={t:Date.now(),type,text}; events.unshift(e); events.length=Math.min(events.length,30); dbPush('events',e); logs(); }
+function al(key,level,text){ const now=Date.now(); if (now-(ak[key]||0)<20000) return; ak[key]=now; const a={t:now,level,text}; alerts.unshift(a); alerts.length=Math.min(alerts.length,20); dbPush('alerts',a); logs(); }
+
+// ===== Ережелер қозғалтқышы (Rule Engine) =====
+function rules(){
+  if (S.mode === 'manual') return;
+  const ph = phase(), night = S.lux < 200 || ph !== 'Күн', day = S.lux > 400 && ph === 'Күн';
+  SEC.forEach(s => {
+    const mv = S.motion[s], idle = Date.now()-seen[s] > 10000; let on, b, tag;
+    if (day) { on=false; b=0; tag='R2: күндіз, шамдар өшірулі'; }
+    else if (night) {
+      on = true;
+      if (mv) { b=100; tag='R3: қозғалыс анықталды, 100 %'; }
+      else if (idle) { b=30; tag='R4: қозғалыс жоқ, 30 %'; }
+      else { b=60; tag='R1: қараңғы, 60 %'; }
+      if (S.fog > 60) { b=Math.min(100,b+20); tag+=' + R5 (тұман)'; }
+      if (S.mode === 'eco') { b=Math.min(b,70); tag+=' + R6 (≤70 %)'; }
+    } else return;
+    lampsOf(s).forEach(l => { l.on=on; l.b=b; });
+    if (last[s] !== tag) { last[s]=tag; log('rule', s+' секторы — '+tag); }
+  });
+}
+function checks(){
+  let t=0;
+  Object.entries(S.lamps).forEach(([id,l]) => { t+=l.p; if (l.fault && l.on) al('f'+id,'critical', id+' шамы ақаулы: қосулы, бірақ жарық жоқ (0 Вт)'); });
+  if (t > S.limit) al('pw','warn','Қуат шектен асты: '+t+' Вт > '+S.limit+' Вт');
+  if (S.fog > 80) al('fog','info','Көрінімділік өте төмен: тұман '+S.fog+' %');
+}
+
+// ===== Симуляция циклі =====
+function tick(){
+  n++; const now=Date.now();
+  if (S.sim) {
+    S.hour = +((S.hour+.15)%24).toFixed(2); S.lux = luxOf(S.hour);
+    S.fog = Math.round(clamp(S.fog+(Math.random()-.5)*8,0,100));
+    SEC.forEach(s => { if (Math.random()<.07) seen[s]=now; });
+    if (Math.random()<.004) { const id=Object.keys(S.lamps)[Math.floor(Math.random()*12)]; if (!S.lamps[id].fault) { S.lamps[id].fault=true; log('fault', id+': симуляцияланған ақау'); } }
+  }
+  SEC.forEach(s => S.motion[s] = now-seen[s] < 4000);
+  rules(); render(); checks();
+  if (n%5===0) pushHist();
+  if (n%2===0) save();
+}
+function pushHist(){
+  const L=Object.values(S.lamps), avg=Math.round(L.reduce((a,l)=>a+(l.on?l.b:0),0)/L.length), pw=L.reduce((a,l)=>a+l.p,0);
+  hist.t.push(time(Date.now())); hist.lux.push(S.lux); hist.avg.push(avg); hist.pw.push(pw);
+  Object.keys(hist).forEach(k => { if (hist[k].length>30) hist[k].shift(); });
+  dbPush('history',{t:Date.now(),lux:S.lux,avg,power:pw,motion:SEC.filter(s=>S.motion[s]).length});
+  c1.update(); c2.update();
+}
+
+// ===== Басқару әрекеттері =====
+function setMode(m){ S.mode=m; log('mode','Режим: '+MODES[m]); last={}; render(); save(); }
+function man(fn){ if (S.mode!=='manual') setMode('manual'); fn(); render(); save(); }
+function setS(k,v){ S[k]=v; if (k==='hour' && !S.sim) {} render(); save(); }
+function toggleSim(){ S.sim=!S.sim; log('sim','Автоматты симуляция: '+(S.sim?'қосулы':'өшірулі')); render(); save(); }
+function pir(s){ seen[s]=Date.now(); log('pir',s+' секторында қозғалыс (қолмен)'); }
+function allOn(v){ man(()=>Object.values(S.lamps).forEach(l=>{ l.on=!!v; if (v && l.b===0) l.b=60; })); }
+function secOn(s,v){ man(()=>lampsOf(s).forEach(l=>{ l.on=!!v; if (v && l.b===0) l.b=60; })); }
+function secB(s,v){ man(()=>lampsOf(s).forEach(l=>{ l.b=+v; l.on=v>0; })); }
+function lampToggle(){ man(()=>{ const l=S.lamps[sel]; l.on=!l.on; if (l.on && l.b===0) l.b=60; }); }
+function lampB(v){ man(()=>{ const l=S.lamps[sel]; l.b=v; l.on=v>0; }); }
+function lampFault(){ const l=S.lamps[sel]; l.fault=!l.fault; log('fault', sel+(l.fault?': ақау симуляцияланды':': жөнделді')); render(); save(); }
+function pick(id){ sel=id; render(); }
+
+// ===== UI =====
+function build(){
+  let h='<rect id="sky" width="720" height="250"/><rect y="200" width="720" height="50" fill="#1f2937"/><path d="M0 224H720" stroke="#475569" stroke-dasharray="14 12" stroke-width="2"/><text id="clk" x="12" y="24" fill="#fff" font-size="15" font-weight="600"></text>';
+  SEC.forEach((s,k)=>{
+    const x0=k*240;
+    h+=`<line x1="${x0}" x2="${x0}" y1="30" y2="250" stroke="#64748b" stroke-opacity=".35" stroke-dasharray="4 6"/><text x="${x0+120}" y="244" text-anchor="middle" fill="#94a3b8" font-size="12">${NAMES[s]}</text><circle id="w${s}" class="walker" cx="${x0+20}" cy="212" r="6" fill="#fbbf24" style="display:none"/>`;
+    [1,2,3,4].forEach(i=>{
+      const id=s+i, x=x0+30+(i-1)*60;
+      h+=`<rect x="${x-2}" y="105" width="4" height="95" fill="#64748b"/><circle id="g${id}" cx="${x}" cy="105" r="12" fill="#ffd66b" opacity="0"/><circle id="h${id}" cx="${x}" cy="105" r="8" fill="#475569"/><text id="x${id}" x="${x}" y="109" text-anchor="middle" fill="#fff" font-size="12" font-weight="700" style="display:none">✕</text><circle id="s${id}" cx="${x}" cy="105" r="19" fill="none" stroke="#38bdf8" stroke-width="2" opacity="0"/><text x="${x}" y="194" text-anchor="middle" fill="#94a3b8" font-size="10">${id}</text><circle cx="${x}" cy="105" r="22" fill="transparent" style="cursor:pointer" onclick="pick('${id}')"/>`;
+    });
+  });
+  $('scene').innerHTML=h;
+  $('secs').innerHTML=SEC.map(s=>`<div><div class="flex justify-between items-center mb-1"><b class="text-sm">${NAMES[s]}</b><span><button class="b" onclick="secOn('${s}',1)">Қосу</button> <button class="b" onclick="secOn('${s}',0)">Өшіру</button></span></div><input id="sb${s}" type="range" min="0" max="100" oninput="secB('${s}',this.value)" aria-label="${s} секторының жарықтығы"></div>`).join('');
+  $('pir').innerHTML=SEC.map(s=>`<button class="b" id="pb${s}" onclick="pir('${s}')">Сектор ${s}</button>`).join('');
+  $('modes').innerHTML=Object.keys(MODES).map(m=>`<button class="b" id="m_${m}" onclick="setMode('${m}')">${MODES[m]}</button>`).join('');
+  const dk=getComputedStyle(document.documentElement).getPropertyValue('--mu').trim();
+  Chart.defaults.color=dk; Chart.defaults.borderColor='rgba(128,140,170,.2)';
+  const o=(y1)=>({animation:false,responsive:true,maintainAspectRatio:false,elements:{point:{radius:0},line:{tension:.3}},plugins:{legend:{labels:{boxWidth:12}}},scales:{x:{ticks:{maxTicksLimit:5}},y:{min:0,max:y1}}});
+  const oo=o(100); oo.scales.y1={position:'right',min:0,max:1000,grid:{drawOnChartArea:false}};
+  c1=new Chart($('c1'),{type:'line',data:{labels:hist.t,datasets:[{label:'Орташа жарықтық, %',data:hist.avg,borderColor:'#f5a623',backgroundColor:'rgba(245,166,35,.15)',fill:true},{label:'Сыртқы жарық, lux',data:hist.lux,borderColor:'#38bdf8',yAxisID:'y1'}]},options:oo});
+  const o2=o(); delete o2.scales.y.max; o2.scales.y.max=undefined;
+  c2=new Chart($('c2'),{type:'bar',data:{labels:hist.t,datasets:[{label:'Қуат, Вт',data:hist.pw,backgroundColor:'#34d399'}]},options:o2});
+}
+function setv(id,v){ const e=$(id); if (document.activeElement!==e) e.value=v; }
+function render(){
+  const L=Object.entries(S.lamps);
+  L.forEach(([id,l])=>{
+    l.p = l.on && !l.fault ? Math.round(5+55*l.b/100) : 0;
+    const o = l.on && !l.fault ? l.b/100 : 0;
+    $('g'+id).setAttribute('opacity',(o*.6).toFixed(2)); $('g'+id).setAttribute('r',12+o*34);
+    $('h'+id).setAttribute('fill', l.fault?'#ef4444':l.on?'#ffe08a':'#475569');
+    $('x'+id).style.display=l.fault?'':'none';
+    $('s'+id).setAttribute('opacity', id===sel?1:0);
+  });
+  const t=clamp(S.lux/1000,0,1), c1_=[10,15,36], c2_=[126,200,255];
+  $('sky').setAttribute('fill','rgb('+c1_.map((v,i)=>Math.round(v+(c2_[i]-v)*t)).join(',')+')');
+  $('clk').textContent=hhmm(S.hour)+' · '+phase()+' · '+S.lux+' lux';
+  SEC.forEach(s=>{ $('w'+s).style.display=S.motion[s]?'':'none'; $('pb'+s).classList.toggle('on',S.motion[s]); const ls=lampsOf(s); setv('sb'+s, Math.round(ls.reduce((a,l)=>a+(l.on?l.b:0),0)/4)); });
+  Object.keys(MODES).forEach(m=>$('m_'+m).classList.toggle('on',S.mode===m));
+  const tot=L.reduce((a,[,l])=>a+l.p,0), act=L.filter(([,l])=>l.on).length, avg=Math.round(L.reduce((a,[,l])=>a+(l.on?l.b:0),0)/12), mv=SEC.filter(s=>S.motion[s]).length;
+  $('stats').innerHTML=[['Орташа жарықтық',avg+' %'],['Жалпы қуат',tot+' Вт'],['Қосулы шамдар',act+' / 12'],['Үнем (макс. қуатқа қатысты)',Math.round(100-tot/7.2)+' %']].map(([a,b])=>`<div class="card p-3"><div class="big ${a==='Жалпы қуат'&&tot>S.limit?'pulse':''}" style="${a==='Жалпы қуат'&&tot>S.limit?'background:none;-webkit-text-fill-color:#ef4444':''}">${b}</div><div class="mu text-xs mt-1">${a}</div></div>`).join('');
+  $('db').textContent=db?'Firebase: қосылған':'Демо-режим (жергілікті жады)';
+  $('db').style.color=db?'#34d399':'var(--mu)';
+  $('simBtn').textContent='Авто-симуляция: '+(S.sim?'қосулы':'өшірулі'); $('simBtn').classList.toggle('on',S.sim);
+  ['lux','hour','fog'].forEach(k=>{ $(k).disabled=S.sim; setv(k,S[k]); });
+  setv('lim',S.limit);
+  $('vl').textContent=S.lux; $('vh').textContent=hhmm(S.hour)+' ('+phase()+')'; $('vf').textContent=S.fog; $('vm').textContent=S.limit;
+  const sl=S.lamps[sel]; $('lt').textContent=sel+(sl.fault?' (ақаулы)':'');
+  $('lonb').textContent=sl.on?'Өшіру':'Қосу'; $('lfb').textContent=sl.fault?'Жөндеу':'Ақау симуляциялау';
+  setv('lb',sl.on?sl.b:0);
+}
+function logs(){
+  const col={critical:'#ef4444',warn:'#f59e0b',info:'#3b82f6'};
+  $('alerts').innerHTML=alerts.slice(0,4).map(a=>`<div class="lg" style="border-color:${col[a.level]}"><span class="mu">${time(a.t)}</span> ${a.text}</div>`).join('')||'<p class="mu text-sm">Ескертулер жоқ</p>';
+  $('ac').textContent='Барлығы: '+alerts.length;
+  $('events').innerHTML=events.slice(0,12).map(e=>`<div class="lg"><span class="mu">${time(e.t)}</span> ${e.text}</div>`).join('')||'<p class="mu text-sm">Оқиғалар әлі жоқ</p>';
+}
+
+build(); render(); logs(); log('sys','Жүйе іске қосылды ('+(db?'Firebase':'демо-режим')+')');
+setInterval(tick,1000);
+</script>
+</body>
+</html>
